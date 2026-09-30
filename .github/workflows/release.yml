@@ -2,16 +2,26 @@ name: Windows Alpha release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to build and publish
+        required: true
+        type: string
 permissions:
   contents: write
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.tag || github.ref_name }}
   cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
+    env:
+      STREAMCHAT_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -21,7 +31,7 @@ jobs:
         shell: pwsh
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
-          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
+          if ($env:STREAMCHAT_TAG -ne "v$version") { throw 'Tag/version mismatch' }
           "STREAMCHAT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: npm run typecheck
       - run: npm run lint
@@ -51,7 +61,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $taskTag = $env:GITHUB_REF_NAME
+          $taskTag = $env:STREAMCHAT_TAG
           $taskRepo = $env:GITHUB_REPOSITORY
           $taskTitle = "StreamChat $env:STREAMCHAT_VERSION Alpha"
           $taskNotes = "docs/releases/$env:STREAMCHAT_VERSION-public.md"
@@ -68,7 +78,9 @@ jobs:
             gh release create $taskTag @taskAssets --repo $taskRepo --verify-tag --draft --title $taskTitle --notes-file $taskNotes
           }
           if ($LASTEXITCODE -ne 0) { throw 'Draft upload failed' }
-          $taskRelease = gh api "repos/$taskRepo/releases/tags/$taskTag" | ConvertFrom-Json
+          $taskDraftInfo = gh release view $taskTag --repo $taskRepo --json apiUrl,isDraft | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not $taskDraftInfo.isDraft) { throw 'Draft could not be located' }
+          $taskRelease = gh api $taskDraftInfo.apiUrl | ConvertFrom-Json
           if ($LASTEXITCODE -ne 0 -or -not $taskRelease.draft) { throw 'Draft could not be verified' }
           if ($taskRelease.assets.Count -ne 3) { throw 'Unexpected release asset count' }
           foreach ($taskFile in $taskAssets) {
