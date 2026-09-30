@@ -1,6 +1,7 @@
 import { externalLinks, allowedExternalUrl } from '../../shared/links';
 import type { UpdateService } from '../services/UpdateService';
-import { shell, clipboard, ipcMain, type BrowserWindow } from 'electron';
+import { app, shell, clipboard, ipcMain, type BrowserWindow } from 'electron';
+import { RELEASE_STAGE } from '../../shared/appVersion';
 import { z } from 'zod';
 import { listSystemFonts } from '../services/SystemFonts';
 export function registerDesktopIPC(window: BrowserWindow, updater?: UpdateService) {
@@ -26,6 +27,9 @@ export function registerDesktopIPC(window: BrowserWindow, updater?: UpdateServic
     if (!allowedExternalUrl(url)) throw new Error('URL denied');
     await shell.openExternal(url);
   });
+  handle('desktop:application-info', z.undefined(), () => ({
+    version: app.getVersion(), stage: RELEASE_STAGE,
+  }));
   handle(
     'desktop:update-state',
     z.undefined(),

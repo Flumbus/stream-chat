@@ -6,9 +6,16 @@ export interface UpdateState {
   enabled: boolean;
   availableVersion?: string;
   progress?: number;
-  error?: 'UPDATE_FAILED';
+  error?: UpdateError;
 }
 export type UpdateAction = 'check' | 'download' | 'install';
+export type UpdateError =
+  | 'UPDATE_FAILED'
+  | 'UPDATE_NOT_PUBLISHED'
+  | 'UPDATE_RELEASE_INCOMPLETE'
+  | 'UPDATE_INVALID_RELEASE'
+  | 'UPDATE_NETWORK_ERROR'
+  | 'UPDATE_INSTALL_FAILED';
 
 export function updatesEnabled(environment: {
   packaged: boolean;

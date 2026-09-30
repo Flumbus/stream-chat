@@ -1,5 +1,6 @@
 import type { EventEmitter } from 'node:events';
 import type { UpdateState, UpdateAction } from '../../shared/updater';
+import { classifyUpdateError } from './updateErrors';
 export interface UpdateDriver extends EventEmitter {
   autoDownload: boolean;
   autoInstallOnAppQuit: boolean;
@@ -12,6 +13,7 @@ export interface UpdateDriver extends EventEmitter {
 export class UpdateService {
   private state: UpdateState;
   private busy = false;
+  private operation: 'check' | 'download' | 'install' = 'check';
   private timer?: ReturnType<typeof setTimeout>;
   private listeners: [string, (value: { version?: string; percent?: number }) => void][] = [];
   constructor(
@@ -38,7 +40,7 @@ export class UpdateService {
       if (this.autoDownload) void this.download();
     });
     on('update-not-available', () =>
-      this.set({ phase: 'up-to-date', availableVersion: undefined, progress: undefined }),
+      this.set({ phase: 'up-to-date', availableVersion: undefined, progress: undefined, error: undefined }),
     );
     on('download-progress', (p) =>
       this.set({ phase: 'downloading', progress: Math.min(100, Math.max(0, p.percent ?? 0)) }),
@@ -46,7 +48,7 @@ export class UpdateService {
     on('update-downloaded', (info) =>
       this.set({ phase: 'downloaded', availableVersion: info.version, progress: 100 }),
     );
-    on('error', () => this.fail());
+    on('error', (error) => this.fail(error));
   }
   snapshot() {
     return { ...this.state };
@@ -55,8 +57,11 @@ export class UpdateService {
     this.state = { ...this.state, ...patch };
     this.changed(this.snapshot());
   }
-  private fail() {
-    this.set({ phase: 'error', error: 'UPDATE_FAILED' });
+  private fail(error: unknown, stage: 'check' | 'download' | 'install' = this.operation) {
+    const code = classifyUpdateError(error, stage);
+    if (stage === 'install') this.busy = false;
+    if (this.state.phase === 'error' && this.state.error === code) return;
+    this.set({ phase: 'error', error: code, progress: undefined });
   }
   configure(autoDownload: boolean) {
     this.autoDownload = autoDownload;
@@ -67,11 +72,12 @@ export class UpdateService {
   }
   private async download() {
     if (this.state.phase !== 'update-available') return;
+    this.operation = 'download';
     this.set({ phase: 'downloading', progress: 0, error: undefined });
     try {
       await this.driver.downloadUpdate();
-    } catch {
-      this.fail();
+    } catch (error) {
+      this.fail(error, 'download');
     }
   }
   async action(action: UpdateAction) {
@@ -83,22 +89,24 @@ export class UpdateService {
     if (action === 'install') {
       if (this.state.phase !== 'downloaded') return;
       this.busy = true;
+      this.operation = 'install';
       try {
         await this.prepareInstall();
         this.driver.quitAndInstall(false, true);
-      } catch {
-        this.fail();
+      } catch (error) {
+        this.fail(error, 'install');
         this.busy = false;
       }
       return;
     }
     if (['checking', 'downloading', 'downloaded'].includes(this.state.phase)) return;
     this.busy = true;
-    this.set({ phase: 'checking', error: undefined });
+    this.operation = 'check';
+    this.set({ phase: 'checking', error: undefined, availableVersion: undefined, progress: undefined });
     try {
       await this.driver.checkForUpdates();
-    } catch {
-      this.fail();
+    } catch (error) {
+      this.fail(error, 'check');
     } finally {
       this.busy = false;
     }

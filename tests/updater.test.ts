@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { it, expect, vi } from 'vitest';
 import { UpdateService } from '../src/main/services/UpdateService';
 import { allowedExternalUrl, externalLinks } from '../src/shared/links';
+import { classifyUpdateError } from '../src/main/services/updateErrors';
 const driver = () =>
   Object.assign(new EventEmitter(), {
     autoDownload: true,
@@ -76,6 +77,82 @@ it('blocks arbitrary external URLs', () => {
     'https://boosty.to:444/itsflamb',
   ])
     expect(allowedExternalUrl(url)).toBe(false);
+});
+
+it('reports an empty GitHub release feed and allows retry when a release appears', async () => {
+  const d = driver();
+  const error = Object.assign(new Error('No published versions on GitHub'), {
+    code: 'ERR_XML_MISSED_ELEMENT',
+  });
+  d.checkForUpdates.mockImplementationOnce(async () => {
+    d.emit('error', error);
+    throw error;
+  });
+  const changed = vi.fn();
+  const s = new UpdateService(d, '0.4.0', true, changed, async () => {});
+  await s.action('check');
+  expect(s.snapshot()).toMatchObject({ phase: 'error', error: 'UPDATE_NOT_PUBLISHED' });
+  expect(changed.mock.calls.filter(([state]) => state.phase === 'error')).toHaveLength(1);
+  expect(d.downloadUpdate).not.toHaveBeenCalled();
+  d.checkForUpdates.mockImplementationOnce(async () => {
+    d.emit('update-not-available', { version: '0.4.0' });
+  });
+  await s.action('check');
+  expect(s.snapshot()).toMatchObject({ phase: 'up-to-date', error: undefined });
+  s.close();
+});
+
+it.each([
+  ['ERR_UPDATER_NO_PUBLISHED_VERSIONS', '', 'UPDATE_NOT_PUBLISHED'],
+  ['ERR_UPDATER_CHANNEL_FILE_NOT_FOUND', '', 'UPDATE_RELEASE_INCOMPLETE'],
+  ['ERR_UPDATER_ASSET_NOT_FOUND', '', 'UPDATE_RELEASE_INCOMPLETE'],
+  ['ERR_XML_MISSED_ELEMENT', 'No element feed', 'UPDATE_FAILED'],
+  ['ERR_UPDATER_INVALID_UPDATE_INFO', '', 'UPDATE_INVALID_RELEASE'],
+  ['ERR_CHECKSUM_MISMATCH', '', 'UPDATE_INVALID_RELEASE'],
+  ['ECONNRESET', '', 'UPDATE_NETWORK_ERROR'],
+  ['', 'net::ERR_TUNNEL_CONNECTION_FAILED', 'UPDATE_NETWORK_ERROR'],
+  ['ERR_UPDATER_LATEST_VERSION_NOT_FOUND', 'net::ERR_NAME_NOT_RESOLVED', 'UPDATE_NETWORK_ERROR'],
+])('classifies %s without exposing provider text', (code, message, expected) => {
+  expect(classifyUpdateError({ code, message }, 'check')).toBe(expected);
+});
+
+it('does not pass signed URLs, local paths or unknown error text to the renderer', async () => {
+  const d = driver();
+  const message = 'private-token https://example.test/update?signature=private';
+  d.checkForUpdates.mockRejectedValueOnce(new Error(message));
+  const s = new UpdateService(d, '0.4.0', true, () => {}, async () => {});
+  await s.action('check');
+  expect(s.snapshot().error).toBe('UPDATE_FAILED');
+  expect(JSON.stringify(s.snapshot())).not.toContain('private');
+  expect(classifyUpdateError(new Error(message), 'install')).toBe('UPDATE_INSTALL_FAILED');
+  s.close();
+});
+
+it('clears stale release details before a failed retry', async () => {
+  const d = driver();
+  const s = new UpdateService(d, '0.4.0', true, () => {}, async () => {}, false);
+  d.emit('update-available', { version: '0.4.1' });
+  d.checkForUpdates.mockRejectedValueOnce({ code: 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND' });
+  await s.action('check');
+  expect(s.snapshot()).toMatchObject({
+    phase: 'error', error: 'UPDATE_RELEASE_INCOMPLETE', availableVersion: undefined,
+  });
+  s.close();
+});
+
+it('handles a synchronous installer error event and unlocks retry', async () => {
+  const d = driver();
+  const s = new UpdateService(d, '0.4.0', true, () => {}, async () => {});
+  d.emit('update-downloaded', { version: '0.4.1' });
+  d.quitAndInstall.mockImplementationOnce(() => {
+    // NsisUpdater emits instead of rejecting when it cannot start the installer.
+    d.emit('error', new Error('installer could not start'));
+  });
+  await s.action('install');
+  expect(s.snapshot()).toMatchObject({ phase: 'error', error: 'UPDATE_INSTALL_FAILED' });
+  await s.action('check');
+  expect(d.checkForUpdates).toHaveBeenCalledTimes(1);
+  s.close();
 });
 
 it('enables updates only in installed Windows builds with release metadata', () => {

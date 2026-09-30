@@ -39,6 +39,7 @@ const api: ChatBackend = {
 };
 contextBridge.exposeInMainWorld('streamchat', api);
 const desktop: DesktopBridge = {
+  applicationInfo: () => ipcRenderer.invoke('desktop:application-info'),
   openExternal: (link) => ipcRenderer.invoke('desktop:external', link),
   updateState: () => ipcRenderer.invoke('desktop:update-state'),
   updateAction: (action) => ipcRenderer.invoke('desktop:update-action', action),

@@ -204,7 +204,9 @@ export const strings = {
   minimize: ['Свернуть окно', 'Minimize window'],
   maximize: ['Развернуть окно', 'Maximize window'],
   restore: ['Восстановить окно', 'Restore window'],
-  closeWindow: ['Закрыть StreamChat', 'Close StreamChat'],
+  closeWindow: ['Скрыть в трей', 'Hide to tray'],
+  trayOpen: ['Открыть StreamChat', 'Open StreamChat'],
+  trayQuit: ['Выйти из StreamChat', 'Quit StreamChat'],
   welcome: ['Добро пожаловать в StreamChat', 'Welcome to StreamChat'],
   welcomeHint: [
     'Подключите платформы — остальное StreamChat настроит автоматически.',
@@ -269,7 +271,7 @@ export const strings = {
     'StreamChat API недоступен. Повторите позже; локальные функции продолжают работать.',
     'StreamChat API is unavailable. Try again later; local features remain available.',
   ],
-  developerTools: ['Инструменты разработчика', 'Developer tools'],
+  developerTools: ['Dev Tools', 'Dev Tools'],
   developerMode: ['Режим разработчика', 'Developer mode'],
   localOnly: ['Только локально', 'Local only'],
   diagnostics: ['Диагностика', 'Diagnostics'],
@@ -306,6 +308,26 @@ export const strings = {
     'Не удалось обновиться. Проверьте интернет и повторите позже.',
     'Update failed. Check your connection and try again later.',
   ],
+  updateNotPublished: [
+    'Обновления ещё не опубликованы. Приложением можно пользоваться.',
+    'Updates have not been published yet. You can keep using the app.',
+  ],
+  updateReleaseIncomplete: [
+    'В опубликованной версии не хватает файлов обновления. Повторите проверку позже.',
+    'The published release is missing update files. Check again later.',
+  ],
+  updateInvalidRelease: [
+    'Не удалось проверить файлы обновления. Повторите позже.',
+    'The update files could not be verified. Try again later.',
+  ],
+  updateNetworkError: [
+    'Нет связи с сервером обновлений. Проверьте интернет и VPN.',
+    'Cannot reach the update server. Check your connection and VPN.',
+  ],
+  updateInstallError: [
+    'Не удалось запустить установку обновления. Повторите проверку или установите новую версию вручную.',
+    'The update installer could not start. Check again or install the new version manually.',
+  ],
   updateDisabled: [
     'Обновления доступны в установленной Windows-версии.',
     'Updates are available in the installed Windows version.',
@@ -314,8 +336,8 @@ export const strings = {
   downloadUpdate: ['Загрузить обновление', 'Download update'],
   installUpdate: ['Перезапустить и установить', 'Restart and install'],
   autoUpdates: ['Автоматически загружать обновления', 'Automatically download updates'],
-  supportBoosty: ['Поддержать на Boosty', 'Support on Boosty'],
-  supportDonation: ['Поддержать через DonationAlerts', 'Support via DonationAlerts'],
+  supportBoosty: ['Boosty', 'Boosty'],
+  supportDonation: ['DonationAlerts', 'DonationAlerts'],
   releaseText0: ['подключений', 'connected'],
   releaseText1: ['Блокировка', 'Blocked'],
   releaseText2: ['ТЕСТОВЫЙ ДОНАТ', 'TEST DONATION'],

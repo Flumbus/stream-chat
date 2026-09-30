@@ -25,6 +25,7 @@ import { useText } from './i18n';
 import { featureEnabled } from '../shared/preferences';
 import type { Platform, ChatMessage } from '../shared/models';
 import { WindowControls } from './components/WindowControls';
+import { AppVersion } from './components/AppVersion';
 import { Feedback } from './components/Feedback';
 const navigation = [
   { id: 'chat', name: 'chat', icon: MessageSquare },
@@ -137,6 +138,7 @@ export function App() {
             <MessageSquare size={18} />
           </span>
           stream<span>chat</span>
+          <AppVersion />
         </div>
         <div className="connection-summary">
           {(['twitch', 'youtube'] as const).map((p) => (

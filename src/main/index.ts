@@ -2,6 +2,8 @@ import { updatesEnabled } from '../shared/updater';
 import { existsSync } from 'node:fs';
 import { autoUpdater } from 'electron-updater';
 import { UpdateService } from './services/UpdateService';
+import { TrayService } from './services/TrayService';
+import { applicationTitle } from '../shared/appVersion';
 import { app, BrowserWindow, dialog, session, powerMonitor } from 'electron';
 import { config } from 'dotenv';
 if (!app.isPackaged) config({ quiet: true });
@@ -14,11 +16,13 @@ import { loadWindowPreferences, trackWindow } from './services/WindowPreferences
 let backend: LocalChatBackend | undefined;
 let quitting = false;
 let updates: UpdateService | undefined;
+let tray: TrayService | undefined;
 if (process.env.STREAMCHAT_TEST_DATA) app.setPath('userData', process.env.STREAMCHAT_TEST_DATA);
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => {
     const w = BrowserWindow.getAllWindows()[0];
+    if (w?.isMinimized()) w.restore();
     w?.show();
     w?.focus();
   });
@@ -42,7 +46,7 @@ else {
         minHeight: Math.min(640, geometry.bounds.height),
         frame: false,
         backgroundColor: '#101213',
-        title: 'StreamChat',
+        title: applicationTitle(app.getVersion()),
         icon: app.isPackaged
           ? join(process.resourcesPath, 'icon.ico')
           : join(app.getAppPath(), 'build/icon.ico'),
@@ -56,6 +60,28 @@ else {
       });
       if (geometry.maximized) window.maximize();
       trackWindow(window, directory);
+      try {
+        tray = new TrayService(
+          window,
+          app.isPackaged ? join(process.resourcesPath, 'icon.ico') : join(app.getAppPath(), 'build/icon.ico'),
+          app.getVersion(),
+          (await backend.snapshot()).settings.desktop?.locale ?? 'ru',
+          () => quitting,
+          () => app.quit(),
+        );
+      } catch {
+        // Never hide the only window if Windows cannot create a tray icon.
+        await backend.logger.write('warn', 'TRAY_UNAVAILABLE', 'app').catch(() => undefined);
+      }
+      window.on('session-end', () => {
+        quitting = true;
+        updates?.close();
+        tray?.close();
+        void backend?.close().catch(() => undefined);
+      });
+      // Provider errors can contain response bodies or signed download URLs.
+      // Log only the fixed classification emitted by UpdateService.
+      autoUpdater.logger = null;
       updates = new UpdateService(
         autoUpdater,
         app.getVersion(),
@@ -67,6 +93,8 @@ else {
           metadata: existsSync(join(process.resourcesPath, 'app-update.yml')),
         }),
         (state) => {
+          if (state.error)
+            void backend?.logger.write('warn', state.error, 'updater').catch(() => undefined);
           if (!window.webContents.isDestroyed())
             window.webContents.send('desktop:update-state', state);
         },
@@ -77,8 +105,10 @@ else {
         (await backend.snapshot()).settings.autoDownloadUpdates ?? true,
       );
       backend.subscribe((event) => {
-        if (event.type === 'state')
+        if (event.type === 'state') {
           updates?.configure(event.snapshot.settings.autoDownloadUpdates ?? true);
+          tray?.configure(event.snapshot.settings.desktop?.locale ?? 'ru');
+        }
       });
       registerDesktopIPC(window, updates);
       updates.start();
@@ -99,6 +129,7 @@ else {
       app.exit(1);
     });
   app.on('window-all-closed', () => app.quit());
+  app.on('will-quit', () => tray?.close());
   app.on('before-quit', (event) => {
     updates?.close();
     if (quitting || !backend) return;

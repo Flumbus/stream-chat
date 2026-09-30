@@ -20,7 +20,7 @@ try {
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(1440, 900));
   await page.screenshot({ animations: 'disabled', path: 'test-results/release-settings.png' });
   await page.getByLabel('Включить экспериментальные функции', { exact: true }).check();
-  await page.getByRole('button', { name: 'Инструменты разработчика', exact: true }).click();
+  await page.getByRole('button', { name: 'Dev Tools', exact: true }).click();
   await expect(page.getByLabel('Режим разработчика', { exact: true })).toBeVisible();
   // Simulate a persisted preferences update while the developer route is open.
   await page.evaluate(async () => {
@@ -39,7 +39,7 @@ try {
     'true',
   );
   await expect(
-    page.getByRole('button', { name: 'Инструменты разработчика', exact: true }),
+    page.getByRole('button', { name: 'Dev Tools', exact: true }),
   ).toHaveCount(0);
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].setSize(900, 640));
   await page.getByRole('heading', { name: 'Настройки', exact: true }).scrollIntoViewIfNeeded();
@@ -183,6 +183,16 @@ try {
   await expect(
     page.getByText('Не удалось обновиться. Проверьте интернет и повторите позже.', { exact: true }),
   ).toBeVisible();
+  await app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].webContents.send('desktop:update-state', {
+      enabled: true, installedVersion: '0.4.1', phase: 'error', error: 'UPDATE_NOT_PUBLISHED',
+    }),
+  );
+  await expect(page.getByText('Обновления ещё не опубликованы. Приложением можно пользоваться.', {
+    exact: true,
+  })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Проверить обновления', exact: true })).toBeEnabled();
+  await page.screenshot({ animations: 'disabled', path: 'test-results/release-update-not-published.png' });
   await page.locator('.workspace-label button').click();
   await page.screenshot({
     animations: 'disabled',

@@ -1,9 +1,12 @@
-name: Windows Preview release
+name: Windows Alpha release
 on:
   push:
     tags: ['v*']
 permissions:
   contents: write
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   release:
     runs-on: windows-latest
@@ -19,13 +22,65 @@ jobs:
         run: |
           $version = (Get-Content package.json | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Tag/version mismatch' }
+          "STREAMCHAT_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - name: Package and publish installer + update metadata
-        run: npx electron-builder --win nsis --publish always
+      - name: Package Windows installer
+        run: npx electron-builder --win nsis --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+      - name: Verify installer metadata and scan packaged files
+        run: |
+          node scripts/verify-release.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Release metadata verification failed' }
+          node scripts/artifact-scan.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged files scan failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StreamChat-${{ env.STREAMCHAT_VERSION }}-windows
+          if-no-files-found: error
+          path: |
+            release/StreamChat-Setup-${{ env.STREAMCHAT_VERSION }}.exe
+            release/StreamChat-Setup-${{ env.STREAMCHAT_VERSION }}.exe.blockmap
+            release/latest.yml
+      - name: Upload verified assets to a draft, then publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $taskTag = $env:GITHUB_REF_NAME
+          $taskRepo = $env:GITHUB_REPOSITORY
+          $taskTitle = "StreamChat $env:STREAMCHAT_VERSION Alpha"
+          $taskNotes = "docs/releases/$env:STREAMCHAT_VERSION-public.md"
+          $taskAssets = @(
+            "release/StreamChat-Setup-$env:STREAMCHAT_VERSION.exe",
+            "release/StreamChat-Setup-$env:STREAMCHAT_VERSION.exe.blockmap",
+            'release/latest.yml'
+          )
+          $taskExisting = gh release view $taskTag --repo $taskRepo --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            if (-not ($taskExisting | ConvertFrom-Json).isDraft) { throw 'Release is already published; refusing to overwrite it' }
+            gh release upload $taskTag @taskAssets --repo $taskRepo --clobber
+          } else {
+            gh release create $taskTag @taskAssets --repo $taskRepo --verify-tag --draft --title $taskTitle --notes-file $taskNotes
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Draft upload failed' }
+          $taskRelease = gh api "repos/$taskRepo/releases/tags/$taskTag" | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0 -or -not $taskRelease.draft) { throw 'Draft could not be verified' }
+          if ($taskRelease.assets.Count -ne 3) { throw 'Unexpected release asset count' }
+          foreach ($taskFile in $taskAssets) {
+            $taskLocal = Get-Item -LiteralPath $taskFile
+            $taskRemote = @($taskRelease.assets | Where-Object name -eq $taskLocal.Name)
+            if ($taskRemote.Count -ne 1 -or $taskRemote[0].state -ne 'uploaded' -or $taskRemote[0].size -ne $taskLocal.Length) {
+              throw "Invalid uploaded asset: $($taskLocal.Name)"
+            }
+            if ($taskRemote[0].digest) {
+              $taskDigest = 'sha256:' + (Get-FileHash -LiteralPath $taskFile -Algorithm SHA256).Hash.ToLowerInvariant()
+              if ($taskRemote[0].digest -ne $taskDigest) { throw "Uploaded asset checksum mismatch: $($taskLocal.Name)" }
+            }
+          }
+          gh release edit $taskTag --repo $taskRepo --draft=false --prerelease=false --latest --title $taskTitle --notes-file $taskNotes
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }

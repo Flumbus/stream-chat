@@ -5,6 +5,7 @@ const { handlers, writeText } = vi.hoisted(() => ({
   writeText: vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined),
 }));
 vi.mock('electron', () => ({
+  app: { getVersion: () => '0.5.0' },
   clipboard: { writeText },
   ipcMain: {
     handle: (channel: string, callback: (event: unknown, value: unknown) => unknown) =>
@@ -33,4 +34,10 @@ it('rejects invalid payloads, other windows and subframes before clipboard acces
   expect(() => copy({ ...event, sender: {} }, 'no')).toThrow('Request denied');
   expect(() => copy({ ...event, senderFrame: {} }, 'no')).toThrow('Request denied');
   expect(writeText).not.toHaveBeenCalled();
+});
+it('provides version metadata through the trusted main process', () => {
+  const info = handlers.get('desktop:application-info')!;
+  expect(info(event, undefined)).toEqual({ version: '0.5.0', stage: 'Alpha' });
+  expect(() => info(event, 'invalid')).toThrow();
+  expect(() => info({ ...event, sender: {} }, undefined)).toThrow('Request denied');
 });

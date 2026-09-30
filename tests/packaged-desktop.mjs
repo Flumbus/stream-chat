@@ -13,11 +13,15 @@ try {
   const page = await app.firstWindow();
   const errors = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  await expect(page.locator('.app-version')).toHaveText('0.5.0 Alpha');
+  expect(await page.evaluate(() => window.desktop.applicationInfo())).toEqual({
+    version: '0.5.0', stage: 'Alpha',
+  });
   await page.getByRole('button', { name: 'Настройки', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Обновления', exact: true })).toBeVisible();
   expect(await app.evaluate(({ app }) => app.isPackaged)).toBe(true);
   expect(await page.evaluate(() => window.desktop.updateState())).toMatchObject({
-    installedVersion: '0.4.0',
+    installedVersion: '0.5.0',
     enabled: false,
     phase: 'idle',
   });

@@ -1,6 +1,6 @@
 {
   "name": "streamchat",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "Local streaming chat workspace for Windows",
   "main": "out/main/index.js",
@@ -16,6 +16,7 @@
     "test:appearance": "node tests/appearance-desktop.mjs",
     "test:oauth": "node tests/oauth-desktop.mjs",
     "test:phase4": "node tests/phase4-desktop.mjs",
+    "test:phase5": "node tests/phase5-desktop.mjs",
     "test:motion": "node tests/motion-desktop.mjs",
     "test:safechat": "node tests/safechat-desktop.mjs",
     "package:win": "npm run build && electron-builder --win nsis --publish never",

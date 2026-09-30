@@ -41,7 +41,7 @@ try {
     .toBe('show');
   await page.getByLabel('Команды', { exact: true }).selectOption('mask');
   await page.getByLabel('Включить экспериментальные функции', { exact: true }).check();
-  await page.getByRole('button', { name: 'Инструменты разработчика', exact: true }).click();
+  await page.getByRole('button', { name: 'Dev Tools', exact: true }).click();
   await expect(page.getByLabel('Режим разработчика', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Аккаунты', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'Ссылка Twitch' })).toBeVisible();
@@ -240,10 +240,9 @@ try {
     win.setBounds({ x: 40, y: 40, width: 1100, height: 720 });
     return win.getBounds();
   });
-  await Promise.all([
-    app.waitForEvent('close'),
-    page.getByRole('button', { name: 'Закрыть StreamChat' }).click(),
-  ]);
+  await page.getByRole('button', { name: 'Скрыть в трей', exact: true }).click();
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].isVisible())).toBe(false);
   await app.close();
   app = await launch();
   page = await app.firstWindow();

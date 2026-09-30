@@ -297,6 +297,18 @@ p {
   letter-spacing: 0.7px;
   font-weight: 500;
 }
+.app-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.release-stage {
+  color: var(--accent);
+}
 .connection-summary {
   display: flex;
   gap: 22px;

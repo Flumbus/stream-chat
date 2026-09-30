@@ -1,5 +1,13 @@
 # Проверки StreamChat
 
+## Phase 5, Alpha 0.5.0 — 30.09.2026
+
+Typecheck/build/lint и сборка NSIS: PASS. Unit/integration: **166 tests / 23 files, PASS**. `test:phase4`, `test:phase5`, `test:release`, `test:packaged`: PASS. Phase 5 повторён непосредственно в новом packaged exe командой `node tests/phase5-desktop.mjs --packaged`: PASS. Дополнительный тест проверяет согласованность версии, имени, размера и SHA-512 релизного установщика с `latest.yml`, включая повреждённые файлы.
+
+Проверены версия из main process в верхней панели при ширине 900 px, скрытие крестиком, восстановление через настоящий объект Electron Tray, сохранение работающего overlay в фоне, повторный запуск из свёрнутого/скрытого состояния, смена RU/EN меню и настоящий выход через callback нативного меню. Backend прекращает обслуживать overlay после выхода. Значок/меню проверены через API Electron; физические клики по области уведомлений Windows не автоматизировались.
+
+Установщик: `release/StreamChat-Setup-0.5.0.exe`; `latest.yml` содержит 0.5.0. Скан app.asar: 3910 файлов, private-file/local-secret/credential-pattern совпадений нет. Не выполнялись установка/удаление на чистой Windows, завершение пользовательской сессии Windows, реальная установка обновления между двумя опубликованными релизами и публикация GitHub Release.
+
 ## Public Preview 0.4.0 — 30.09.2026
 
 | Проверка | Результат |

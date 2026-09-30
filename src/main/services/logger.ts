@@ -1,7 +1,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 export type LogCategory =
-  'app' | 'oauth' | 'twitch' | 'youtube' | 'websocket' | 'overlay' | 'database' | 'ipc';
+  'app' | 'oauth' | 'twitch' | 'youtube' | 'websocket' | 'overlay' | 'database' | 'ipc' | 'updater';
 const sensitive =
   /access.?token|refresh.?token|authorization|secret|cookie|password|device.?code|api.?key|^code$|^key$/i;
 export function redact(value: unknown): unknown {

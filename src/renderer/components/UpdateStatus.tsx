@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
-import type { UpdateState, UpdateAction } from '../../shared/updater';
+import type { UpdateState, UpdateAction, UpdateError } from '../../shared/updater';
 import { useText } from '../i18n';
 import { perform, updateSettings, useApp } from '../stores/app';
+const errorText = {
+  UPDATE_FAILED: 'updateError',
+  UPDATE_NOT_PUBLISHED: 'updateNotPublished',
+  UPDATE_RELEASE_INCOMPLETE: 'updateReleaseIncomplete',
+  UPDATE_INVALID_RELEASE: 'updateInvalidRelease',
+  UPDATE_NETWORK_ERROR: 'updateNetworkError',
+  UPDATE_INSTALL_FAILED: 'updateInstallError',
+} as const satisfies Record<UpdateError, string>;
 export function UpdateStatus() {
   const t = useText();
   const [state, setState] = useState<UpdateState>();
@@ -29,7 +37,7 @@ export function UpdateStatus() {
                   downloading: 'updateDownloading',
                   downloaded: 'updateReady',
                   'up-to-date': 'updateCurrent',
-                  error: 'updateError',
+                  error: errorText[state.error ?? 'UPDATE_FAILED'],
                 } as const
               )[state.phase],
             )

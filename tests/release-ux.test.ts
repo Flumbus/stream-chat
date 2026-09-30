@@ -73,7 +73,7 @@ describe('release UX', () => {
         translate('en', presetTextKey(theme.id)),
       );
     }
-    expect(translate('en', 'developerTools')).toBe('Developer tools');
+    expect(translate('en', 'developerTools')).toBe('Dev Tools');
   });
 });
 

@@ -2,6 +2,7 @@ export interface WindowState {
   maximized: boolean;
 }
 export interface DesktopBridge {
+  applicationInfo(): Promise<import('./appVersion').ApplicationInfo>;
   openExternal(link: import('./links').ExternalLink): Promise<void>;
   updateState(): Promise<import('./updater').UpdateState>;
   updateAction(action: import('./updater').UpdateAction): Promise<void>;
