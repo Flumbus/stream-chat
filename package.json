@@ -1,0 +1,116 @@
+{
+  "name": "streamchat",
+  "version": "0.4.0",
+  "private": true,
+  "description": "Local streaming chat workspace for Windows",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "npm run build:overlay && electron-vite dev",
+    "build": "npm run typecheck && electron-vite build && npm run build:overlay",
+    "build:overlay": "vite build --config vite.overlay.config.ts",
+    "start": "electron .",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:desktop": "node tests/desktop.mjs",
+    "test:appearance": "node tests/appearance-desktop.mjs",
+    "test:oauth": "node tests/oauth-desktop.mjs",
+    "test:phase4": "node tests/phase4-desktop.mjs",
+    "test:motion": "node tests/motion-desktop.mjs",
+    "test:safechat": "node tests/safechat-desktop.mjs",
+    "package:win": "npm run build && electron-builder --win nsis --publish never",
+    "test:release": "node tests/release-desktop.mjs",
+    "test:packaged": "node tests/packaged-desktop.mjs"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.5",
+    "@grpc/proto-loader": "^0.8.1",
+    "@tanstack/react-virtual": "^3.14.13",
+    "dotenv": "^18.0.4",
+    "electron-updater": "^6.8.9",
+    "lucide-react": "^1.48.0",
+    "protobufjs": "^8.8.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^7.3.6",
+    "vitest": "^5.0.2"
+  },
+  "author": "fromflamb",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Flumbus/stream-chat.git"
+  },
+  "homepage": "https://github.com/Flumbus/stream-chat",
+  "build": {
+    "appId": "ru.fromflamb.streamchat",
+    "productName": "StreamChat",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json",
+      "!**/*.map",
+      "!**/.env*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "StreamChat-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "StreamChat",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "include": "build/installer.nsh"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Flumbus",
+        "repo": "stream-chat",
+        "releaseType": "release"
+      }
+    ]
+  }
+}

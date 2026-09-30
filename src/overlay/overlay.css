@@ -1,0 +1,27 @@
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+#root {
+  display: flex;
+}
+.overlay-renderer {
+  --bg: transparent;
+  --surface: #191c1e;
+  --hover: #24282b;
+  --border: #ffffff18;
+  --text: #e9eceb;
+  --muted: #9aa3a7;
+  --accent: #b9f36b;
+}
+.overlay-renderer button {
+  cursor: default;
+}
+.overlay-renderer .username {
+  pointer-events: none;
+}

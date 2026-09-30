@@ -1,0 +1,30 @@
+node_modules/
+out/
+dist/
+test-results/
+.env
+*.sqlite*
+*.log
+
+# Separate backend repository; never a submodule.
+stream-chat-api/
+release/
+coverage/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.cer
+credentials*.json
+client_secret*.json
+*.db
+*.db-*
+
+# Generated build files, retaining the source installer assets.
+build/*
+!build/icon.ico
+!build/installer.nsh
+# Original user reference; the runtime preview asset is under src/renderer/assets.
+/iconpreview.jpg
